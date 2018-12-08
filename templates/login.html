@@ -1,0 +1,57 @@
+{% extends "main.html" %}
+{% block content %}
+  <div>
+    <h3>Login</h3>
+    <script>
+      window.fbAsyncInit = function() {
+        FB.init({
+          appId      : '{{ FB_APP_ID }}',
+          cookie     : true,  // enable cookies to allow the server to access 
+          xfbml      : true,  // parse social plugins on this page
+          version    : 'v3.2' // use version 2.2
+        });
+
+        FB.getLoginStatus(function(response) {
+          console.log('getLoginStatus', response);
+          if (response.status === "connected") {
+            sendTokenToServer(response.authResponse.accessToken);
+          }
+        });
+      };
+    
+      // Load the SDK asynchronously
+      (function(d, s, id) {
+        var js, fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) return;
+        js = d.createElement(s); js.id = id;
+        js.src = "//connect.facebook.net/en_US/sdk.js";
+        fjs.parentNode.insertBefore(js, fjs);
+      }(document, 'script', 'facebook-jssdk'));
+  
+      function checkLoginState() {
+        FB.getLoginStatus(function(response) {
+          if (response.status === "connected") {
+            sendTokenToServer(response.authResponse.accessToken);
+          }
+        });
+      }
+  
+      function sendTokenToServer(access_token) {
+        FB.api('/me', function(response) {
+          fetch(`/fb_connect?state={{ STATE }}`, {
+            method: 'POST',
+            body: access_token,
+            headers: {
+              'Content-Type': 'application/octet-stream; charset=utf-8'
+            }
+          })
+            .then((res) => window.location.href = "/")
+            .catch((err) => {
+              console.log("Error: ", err);
+            });
+        });
+      }
+    </script>
+    <div class="fb-login-button" data-onlogin="checkLoginState();" data-max-rows="1" data-size="large" data-button-type="login_with" data-show-faces="false" data-auto-logout-link="false" data-use-continue-as="false"></div>
+  </div>
+{% endblock %}

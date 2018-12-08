@@ -1,29 +1,30 @@
 {% extends "main.html" %}
 {% block content %}
   <div>
-    <!-- <a href="{{ url_for('categories') }}">
-      <p>Show all categories</p>
-    </a> -->
     <div>
+      {% if 'id' in session and session['id'] == category.user_id %}
       <div>
         <p>Delete Category</p>
         <form id="delete-category" data-category-id="{{ category.id }}">
           <button type="submit">Delete</button>
         </form>
       </div>
+      {% endif %}
       <div>
         <h3>{{ category.name }}</h3>
       </div>
-      <div>
-        <p>Edit Category</p>
-        <form id="edit-category" data-category-id="{{ category.id }}">
-          <fieldset>
-            <legend>Name</legend>
-            <input name="name" value="{{ category.name }}" />
-          </fieldset>
-          <button type="submit">Edit</button>
-        </form>
-      </div>
+      {% if 'id' in session and session['id'] == category.user_id %}
+        <div>
+          <p>Edit Category</p>
+          <form id="edit-category" data-category-id="{{ category.id }}">
+            <fieldset>
+              <legend>Name</legend>
+              <input name="name" value="{{ category.name }}" />
+            </fieldset>
+            <button type="submit">Edit</button>
+          </form>
+        </div>
+      {% endif %}
     </div>
     <div>
       <div>
@@ -48,7 +49,7 @@
       </div>
       <div>
         {% for item in items %}
-          <a href="{{ url_for('update_items', category_id = category.id, item_id = item.id) }}">
+          <a href="{{ url_for('get_item', category_id = category.id, item_id = item.id) }}">
             <p>{{ item.name }}</p>
           </a>
         {% endfor %}

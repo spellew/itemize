@@ -2,34 +2,38 @@
 {% block content %}
     <div>
       <div>
-        <a href="{{ url_for('update_categories', category_id = category.id) }}">
+        <a href="{{ url_for('get_items', category_id = category.id) }}">
           <p>Back to {{ category.name }} category</p>
         </a>
       </div>
       <div>
-        <div>
-          <p>Delete Item</p>
-          <form id="delete-item" data-category-id="{{ category.id }}" data-item-id="{{ item.id }}">
-            <button type="submit">Delete</button>
-          </form>
-        </div>
+        {% if 'id' in session and session['id'] == item.user_id %}
+          <div>
+            <p>Delete Item</p>
+            <form id="delete-item" data-category-id="{{ category.id }}" data-item-id="{{ item.id }}">
+              <button type="submit">Delete</button>
+            </form>
+          </div>
+        {% endif %}
         <div>
           <h3>{{ item.name }}</h3>
         </div>
-        <div>
-          <p>Edit Item</p>
-          <form id="edit-item" data-category-id="{{ category.id }}" data-item-id="{{ item.id }}">
-            <fieldset>
-              <legend>Name</legend>
-              <input name="name" value="{{ item.name }}" />
-            </fieldset>
-            <fieldset>
-              <legend>Description</legend>
-              <textarea name="description" form="edit-item">{{ item.description }}</textarea>
-            </fieldset>
-            <button type="submit">Edit</button>
-          </form>
-        </div>
+        {% if 'id' in session and session['id'] == item.user_id %}
+          <div>
+            <p>Edit Item</p>
+            <form id="edit-item" data-category-id="{{ category.id }}" data-item-id="{{ item.id }}">
+              <fieldset>
+                <legend>Name</legend>
+                <input name="name" value="{{ item.name }}" />
+              </fieldset>
+              <fieldset>
+                <legend>Description</legend>
+                <textarea name="description" form="edit-item">{{ item.description }}</textarea>
+              </fieldset>
+              <button type="submit">Edit</button>
+            </form>
+          </div>
+        {% endif %}
       </div>
       <div>
         <p>{{ item.description }}</p>

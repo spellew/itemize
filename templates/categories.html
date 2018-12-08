@@ -18,7 +18,7 @@
     </div>
     <div>
       {% for category in categories %}
-        <a href="{{ url_for('update_categories', category_id = category.id) }}">
+        <a href="{{ url_for('get_items', category_id = category.id) }}">
           <div>
             <div>
               <h3>{{ category.name }}</h3>

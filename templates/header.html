@@ -1,12 +1,12 @@
 <div>
   <div>
-    <a href="{{ url_for('categories') }}">Show All Categories</a>
+    <a href="{{ url_for('get_categories') }}">Show All Categories</a>
   </div>
   <div>
-    <!-- {-% if 'id' not in session %}
-      <a href="{-{url_for('showLogin')}-}">Click Here to Login</a>
-    {-% else %}
-      <a href="{-{url_for('disconnect')}-}">Logout</a>
-    {-% endif %-} -->
+    {% if 'id' not in session %}
+      <a href="{{ url_for('login') }}">Click Here to Login</a>
+    {% else %}
+      <a href="{{ url_for('logout') }}">Logout</a>
+    {% endif %}
   </div>
 </div>

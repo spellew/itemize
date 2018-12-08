@@ -1,19 +1,21 @@
-(() => {
+(function() {
 
+  // Because HTML forms cannot make PUT or DELETE requests,
+  // we use this function to make the request, and follow through server redirects.
   function handleFormSubmit({ endpoint, method, body = null }) {
-    return fetch(`http://localhost:5000/${endpoint}`, {
+    return fetch(`/${endpoint}`, {
       method: method,
       body: body,
-      redirect: 'manual'
-    });
+      redirect: 'follow'
+    })
+      .then(res => window.location = res.url);
   }
   
   const deleteCategory = document.getElementById("delete-category");
   if (deleteCategory) {
     deleteCategory.addEventListener("submit", (evt) => {
       evt.preventDefault();
-      handleFormSubmit({ method: "DELETE", endpoint: `categories/${deleteCategory.dataset.categoryId}/` })
-        .then(() => window.location = `http://localhost:5000/categories`)
+      handleFormSubmit({ method: "DELETE", endpoint: `categories/${deleteCategory.dataset.categoryId}/delete` })
         .catch((err) => {
           console.log("Error: ", err);
         });
@@ -24,8 +26,7 @@
   if (editCategory) {
     editCategory.addEventListener("submit", (evt) => {
       evt.preventDefault();
-      handleFormSubmit({ method: "PUT", endpoint: `categories/${editCategory.dataset.categoryId}/`, body: new FormData(editCategory) })
-        .then(() => location.reload())
+      handleFormSubmit({ method: "PUT", endpoint: `categories/${editCategory.dataset.categoryId}/edit`, body: new FormData(editCategory) })
         .catch((err) => {
           console.log("Error: ", err);
         });
@@ -36,8 +37,7 @@
   if (deleteItem) {
     deleteItem.addEventListener("submit", (evt) => {
       evt.preventDefault();
-      handleFormSubmit({ method: "DELETE", endpoint: `categories/${deleteItem.dataset.categoryId}/items/${deleteItem.dataset.itemId}/` })
-        .then(() => window.location = `http://localhost:5000/categories/${deleteItem.dataset.categoryId}`)
+      handleFormSubmit({ method: "DELETE", endpoint: `categories/${deleteItem.dataset.categoryId}/items/${deleteItem.dataset.itemId}/delete` })
         .catch((err) => {
           console.log("Error: ", err);
         });
@@ -48,8 +48,7 @@
   if (editItem) {
     editItem.addEventListener("submit", (evt) => {
       evt.preventDefault();
-      handleFormSubmit({ method: "PUT", endpoint: `categories/${editItem.dataset.categoryId}/items/${editItem.dataset.itemId}/`, body: new FormData(editItem) })
-        .then(() => location.reload())
+      handleFormSubmit({ method: "PUT", endpoint: `categories/${editItem.dataset.categoryId}/items/${editItem.dataset.itemId}/edit`, body: new FormData(editItem) })
         .catch((err) => {
           console.log("Error: ", err);
         });
