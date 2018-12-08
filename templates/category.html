@@ -1,0 +1,58 @@
+{% extends "main.html" %}
+{% block content %}
+  <div>
+    <!-- <a href="{{ url_for('categories') }}">
+      <p>Show all categories</p>
+    </a> -->
+    <div>
+      <div>
+        <p>Delete Category</p>
+        <form id="delete-category" data-category-id="{{ category.id }}">
+          <button type="submit">Delete</button>
+        </form>
+      </div>
+      <div>
+        <h3>{{ category.name }}</h3>
+      </div>
+      <div>
+        <p>Edit Category</p>
+        <form id="edit-category" data-category-id="{{ category.id }}">
+          <fieldset>
+            <legend>Name</legend>
+            <input name="name" value="{{ category.name }}" />
+          </fieldset>
+          <button type="submit">Edit</button>
+        </form>
+      </div>
+    </div>
+    <div>
+      <div>
+        <div></div>
+        <div>
+          <h3>Items</h3>
+        </div>
+        <div>
+          <p>Add Item</p>
+          <form method="POST">
+            <fieldset>
+              <legend>Name</legend>
+              <input name="name" />
+            </fieldset>
+            <fieldset>
+              <legend>Description</legend>
+              <textarea name="description"></textarea>
+            </fieldset>
+            <button type="submit">Create</button>
+          </form>
+        </div>
+      </div>
+      <div>
+        {% for item in items %}
+          <a href="{{ url_for('update_items', category_id = category.id, item_id = item.id) }}">
+            <p>{{ item.name }}</p>
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+{% endblock %}

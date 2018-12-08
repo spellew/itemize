@@ -1,0 +1,31 @@
+{% extends "main.html" %}
+{% block content %}
+  <div>
+    <div>
+      <div>
+        <h3>Categories</h3>
+      </div>
+      <div>
+        <p>Add Category</p>
+        <form method="POST">
+          <fieldset>
+            <legend>Name</legend>
+            <input name="name" />
+          </fieldset>
+          <button type="submit">Create</button>
+        </form>
+      </div>
+    </div>
+    <div>
+      {% for category in categories %}
+        <a href="{{ url_for('update_categories', category_id = category.id) }}">
+          <div>
+            <div>
+              <h3>{{ category.name }}</h3>
+            </div>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}
