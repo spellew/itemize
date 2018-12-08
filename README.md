@@ -4,6 +4,13 @@
 
 This project is an application that provides a list of items within a variety of categories, as well as a user registration and authentication system. Registered users have the ability to post, edit and delete their own items.
 
+## How To Run
+
+0. `Python3` must be installed
+1. Run `$ pip install sqlalchemy --user` and `$ pip install flask --user`
+2. Run `$ python3 server.py`
+3. Open `http://localhost:5000` in your browser
+
 ## Specifications
 
 #### API Endpoints
