@@ -59,6 +59,7 @@ def createUser(login_session):
 
 class auth:
 
+    @staticmethod
     def required(f):
 
         @wraps(f)
