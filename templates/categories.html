@@ -5,16 +5,18 @@
       <div>
         <h3>Categories</h3>
       </div>
+      {% if 'id' in session %}
       <div>
         <p>Add Category</p>
         <form method="POST">
           <fieldset>
             <legend>Name</legend>
-            <input name="name" />
+            <input name="name" required />
           </fieldset>
           <button type="submit">Create</button>
         </form>
       </div>
+      {% endif %}
     </div>
     <div>
       {% for category in categories %}

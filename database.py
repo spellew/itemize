@@ -11,8 +11,9 @@ from sqlalchemy import create_engine
 Base = declarative_base()
 
 
-# Calling String with an argument, limits the number of characters the string can contain
-# ForeignKey constrains a Column to only accept values present in another Column
+# Calling String with an argument, limits the number of
+# characters the string can contain # ForeignKey constrains
+# a Column to only accept values present in another Column
 # @propery creates a propert of a class
 # serialize produces a json stringable object for a row
 
@@ -21,9 +22,9 @@ class User(Base):
     __tablename__ = 'user'
 
     id = Column(Integer, primary_key=True)
-    name = Column(String(255))
-    facebook_id = Column(String)
-    picture = Column(String)
+    email = Column(String(255), nullable=False, unique=True)
+    google_id = Column(String,  nullable=False, unique=True)
+    picture = Column(String,  nullable=False)
 
     @property
     def serialize(self):
@@ -75,4 +76,3 @@ engine = create_engine('sqlite:///itemize.db')
 # Creates all of our Tables using the created engine
 
 Base.metadata.create_all(engine)
-

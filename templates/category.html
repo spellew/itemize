@@ -19,7 +19,7 @@
           <form id="edit-category" data-category-id="{{ category.id }}">
             <fieldset>
               <legend>Name</legend>
-              <input name="name" value="{{ category.name }}" />
+              <input name="name" required value="{{ category.name }}" />
             </fieldset>
             <button type="submit">Edit</button>
           </form>
@@ -37,7 +37,7 @@
           <form method="POST">
             <fieldset>
               <legend>Name</legend>
-              <input name="name" />
+              <input name="name" required />
             </fieldset>
             <fieldset>
               <legend>Description</legend>

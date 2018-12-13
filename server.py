@@ -4,22 +4,20 @@
 from flask import Flask, request, redirect, abort, Response, url_for, \
     render_template, make_response, jsonify
 from flask import session as login_session
+from oauth2client.client import flow_from_clientsecrets
+from oauth2client.client import FlowExchangeError
 from sqlalchemy import create_engine, asc
 from sqlalchemy.orm import sessionmaker, scoped_session
 from database import Base, User, Category, Item
 from functools import wraps
+import httplib2
+import requests
 import random
 import string
 import json
 
-FB_APP_ID = json.loads(open('fb_client_secrets.json', 'r').read())['web'
-        ]['app_id']
-FB_APP_SECRET = json.loads(open('fb_client_secrets.json', 'r'
-                           ).read())['web']['app_secret']
-
-from oauth2client.client import flow_from_clientsecrets
-from oauth2client.client import FlowExchangeError
-import httplib2
+GOOGLE_CLIENT_ID = json.loads(
+    open('g_client_secrets.json', 'r').read())['web']['client_id']
 
 app = Flask(__name__)
 
@@ -36,24 +34,28 @@ def remove_db_session(arg=None):
 
 
 # checks if the user is in the database
-def getUserID(facebook_id):
+def getUserID(email):
     try:
         user = \
-            db_session.query(User).filter_by(facebook_id=facebook_id).one()
+            db_session.query(User).filter_by(email=email).one()
         return user.id
-    except:
+    except Exception as e:
         return None
+
 
 # We use the flask session to create and store our user in the database
 def createUser(login_session):
-    new_user = User(facebook_id=login_session['facebook_id'],
-                    name=login_session['name'],
-                    picture=login_session['picture'])
+    new_user = User(
+      google_id=login_session['google_id'],
+      picture=login_session['picture'],
+      email=login_session['email']
+    )
     db_session.add(new_user)
     db_session.commit()
     user = \
-        db_session.query(User).filter_by(facebook_id=login_session['facebook_id'
-            ]).one()
+        db_session.query(User).filter_by(
+          google_id=login_session['google_id']
+        ).one()
     return user.id
 
 
@@ -76,53 +78,91 @@ def login():
     state = ''.join(random.choice(string.ascii_uppercase
                     + string.digits) for x in range(32))
     login_session['state'] = state
-    return render_template('login.html', STATE=state,
-                           FB_APP_ID=FB_APP_ID)
+    return render_template(
+      'login.html',
+      STATE=state,
+      GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID
+    )
+
 
 # Using the validated access_token we receive from the client,
 # we send a request to the FB API for the user's basic information
 # and profile picture. If the user isn't in our database, we store it,
-# and the user's information is always stored in the flask session for later use.
-@app.route('/fb_connect', methods=['POST'])
-def fb_connect():
+# and the user's information is always stored in the flask session
+# for later use.
+@app.route('/g_connect', methods=['POST'])
+def g_connect():
+    # Validate state token
     if request.args.get('state') != login_session['state']:
         response = \
-            make_response(json.dumps({'error': 'Invalid state parameter.'
-                          }), 401)
+            make_response(json.dumps('Invalid state parameter.'), 401)
+        response.headers['Content-Type'] = 'application/json'
+        return response
+    # Obtain authorization code
+    code = request.data
+
+    try:
+        # Upgrade the authorization code into a credentials object
+        oauth_flow = flow_from_clientsecrets('g_client_secrets.json', scope='')
+        oauth_flow.redirect_uri = 'postmessage'
+        credentials = oauth_flow.step2_exchange(code)
+    except FlowExchangeError:
+        response = make_response(
+            json.dumps('Failed to upgrade the authorization code.'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
 
-    access_token = request.data.decode('utf-8')
-    url = \
-        'https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token&client_id=%s&client_secret=%s&fb_exchange_token=%s' \
-        % (FB_APP_ID, FB_APP_SECRET, access_token)
+    # Check that the access token is valid.
+    access_token = credentials.access_token
+    url = ('https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=%s'
+           % access_token)
     h = httplib2.Http()
+    result = json.loads(h.request(url, 'GET')[1])
+    # If there was an error in the access token info, abort.
+    if result.get('error') is not None:
+        response = make_response(json.dumps(result.get('error')), 500)
+        response.headers['Content-Type'] = 'application/json'
+        return response
 
-    result = h.request(url, 'GET')[1]
-    token = json.loads(result)['access_token']
-    userinfo_url = \
-        'https://graph.facebook.com/v3.2/me?access_token=%s&fields=name,id,email' \
-        % token
+    # Verify that the access token is used for the intended user.
+    google_id = credentials.id_token['sub']
+    if result['user_id'] != google_id:
+        response = make_response(
+            json.dumps("Token's user ID doesn't match given user ID."), 401)
+        response.headers['Content-Type'] = 'application/json'
+        return response
 
-    h = httplib2.Http()
-    result = h.request(userinfo_url, 'GET')[1]
-    data = json.loads(result)
+    # Verify that the access token is valid for this app.
+    if result['issued_to'] != GOOGLE_CLIENT_ID:
+        response = make_response(
+            json.dumps("Token's client ID does not match app's."), 401)
+        print("Token's client ID does not match app's.")
+        response.headers['Content-Type'] = 'application/json'
+        return response
 
-    login_session['access_token'] = access_token
-    login_session['facebook_id'] = data['id']
-    login_session['name'] = data['name']
+    stored_access_token = login_session.get('access_token')
+    stored_google_id = login_session.get('google_id')
+    if stored_access_token is not None:
+        if google_id == stored_google_id:
+            response = make_response(json.dumps(
+              'Current user is already connected.'
+            ), 200)
+            response.headers['Content-Type'] = 'application/json'
+            return response
 
-    picture_url = \
-        'https://graph.facebook.com/%s/picture?type=large&redirect=0' \
-        % login_session['facebook_id']
+    # Store the access token in the session for later use.
+    login_session['access_token'] = credentials.access_token
+    login_session['google_id'] = google_id
 
-    h = httplib2.Http()
-    result = h.request(picture_url, 'GET')[1]
-    data = json.loads(result)
+    # Get user info
+    userinfo_url = "https://www.googleapis.com/oauth2/v1/userinfo"
+    params = {'access_token': credentials.access_token, 'alt': 'json'}
+    answer = requests.get(userinfo_url, params=params)
+    data = answer.json()
+    login_session['picture'] = data['picture']
+    login_session['email'] = data['email']
 
-    login_session['picture'] = data['data']['url']
-
-    user_id = getUserID(login_session['facebook_id'])
+    user_id = getUserID(data['email'])
 
     if not user_id:
         user_id = createUser(login_session)
@@ -130,36 +170,35 @@ def fb_connect():
     login_session['id'] = user_id
 
     response = \
-        make_response(json.dumps({'response': 'You are now logged in as %s.'
-                       % login_session['name']}), 200)
+        make_response(json.dumps(
+          'You are now logged in as %s.' % login_session['email']
+        ), 200)
     response.headers['Content-Type'] = 'application/json'
     return response
+
 
 # We delete the user's information from our session and redirect
 # them to the index
 @app.route('/logout/', methods=['GET'])
 def logout():
-    success = fb_disconnect()
+    success = g_disconnect()
     if success:
         del login_session['access_token']
         del login_session['state']
-        del login_session['facebook_id']
+        del login_session['google_id']
         del login_session['id']
-        del login_session['name']
+        del login_session['email']
         del login_session['picture']
     return redirect(url_for('get_categories'))
 
 
-def fb_disconnect():
-    facebook_id = login_session['facebook_id']
+def g_disconnect():
     access_token = login_session['access_token']
 
-    url = 'https://graph.facebook.com/%s/permissions?access_token=%s' \
-        % (facebook_id, access_token)
+    url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' % access_token
     h = httplib2.Http()
-    result = json.loads(h.request(url, 'DELETE')[1])
-
-    return 'success' in result and result['success']
+    result = h.request(url, 'GET')[0]
+    return result['status'] == '200'
 
 
 @app.route('/', methods=['GET'])
@@ -181,25 +220,42 @@ def get_categories():
         return abort(Response('An unexpected error occurred', 500))
 
 
+@app.route('/categories/JSON', methods=['GET'])
+def get_categories_json():
+    try:
+        categories = \
+            db_session.query(Category).order_by(asc(Category.name)).all()
+        return jsonify(categories=[
+          category.serialize for category in categories
+        ])
+    except Exception as e:
+        print('Error: ')
+        print(e)
+        return abort(Response('An unexpected error occurred', 500))
+
+
 @app.route('/', methods=['POST'])
 @app.route('/categories/', methods=['POST'])
 @auth.required
 def new_category():
     if 'name' in request.form:
-        try:
-            new_category = Category(name=request.form['name'],
-                                    user_id=1)
-            db_session.add(new_category)
-            db_session.commit()
-            return redirect(url_for('get_items',
-                            category_id=new_category.id))
-        except Exception as e:
-            print('Error: ')
-            print(e)
-            return abort(Response('An unexpected error occurred', 500))
+        if len(request.form['name']) >= 1:
+            try:
+                new_category = Category(name=request.form['name'],
+                                        user_id=login_session['id'])
+                db_session.add(new_category)
+                db_session.commit()
+                return redirect(url_for('get_items',
+                                category_id=new_category.id))
+            except Exception as e:
+                print('Error: ')
+                print(e)
+                return abort(Response('An unexpected error occurred', 500))
+        else:
+            abort(Response('Parameters must not be empty', 400))
     else:
-        return abort(Response('Required form parameters are missing',
-                     400))
+        return abort(Response('Required form parameters are missing', 400))
+
 
 # If the form data from the client matches up to our accepted fields
 # we'll change the record, if the user is authorized
@@ -214,7 +270,13 @@ def edit_category(category_id):
         if login_session['id'] == category.user_id:
             for arg in request.form:
                 if arg in allowed_edits:
-                    setattr(category, arg, request.form[arg])
+                    if len(request.form[arg]) >= 1:
+                        setattr(category, arg, request.form[arg])
+                    else:
+                        return abort(Response(
+                          'Parameters must not be empty',
+                          400
+                        ))
             db_session.add(category)
             db_session.commit()
             return redirect(url_for('get_items',
@@ -251,6 +313,7 @@ def delete_category(category_id):
         print(e)
         return abort(Response('An unexpected error occurred', 500))
 
+
 # If the url contains "?fmt=json" we serve a json containing the records,
 # if not we serve an html page
 @app.route('/categories/<int:category_id>/', methods=['GET'])
@@ -259,9 +322,13 @@ def get_items(category_id):
     try:
         fmt = request.args.get('fmt')
         category = \
-            db_session.query(Category).filter_by(id=category_id).one()
+            db_session.query(Category).filter_by(
+              id=category_id
+            ).one()
         items = \
-            db_session.query(Item).filter_by(category_id=category_id).order_by(asc(Item.name)).all()
+            db_session.query(Item).filter_by(
+              category_id=category_id
+            ).order_by(asc(Item.name)).all()
         if fmt == 'json':
             return jsonify(category=category.serialize,
                            items=[item.serialize for item in items])
@@ -274,26 +341,58 @@ def get_items(category_id):
         return abort(Response('An unexpected error occurred', 500))
 
 
+@app.route('/categories/<int:category_id>/JSON', methods=['GET'])
+@app.route('/categories/<int:category_id>/items/JSON', methods=['GET'])
+def get_items_json(category_id):
+    try:
+        category = \
+            db_session.query(Category).filter_by(id=category_id).one()
+        items = \
+            db_session.query(Item).filter_by(
+              category_id=category_id
+            ).order_by(asc(Item.name)).all()
+        serial = category.serialize.copy()
+        serial['items'] = [item.serialize for item in items]
+        return jsonify(
+          category=serial
+        )
+    except Exception as e:
+        print('Error: ')
+        print(e)
+        return abort(Response('An unexpected error occurred', 500))
+
+
 @app.route('/categories/<int:category_id>/', methods=['POST'])
 @app.route('/categories/<int:category_id>/items/', methods=['POST'])
 @auth.required
 def new_item(category_id):
     if 'name' in request.form:
-        try:
-            new_item = Item(name=request.form['name'],
-                            description=(request.form['description'
-                            ] if 'description'
-                            in request.form else None),
-                            category_id=category_id, user_id=1)
-            db_session.add(new_item)
-            db_session.commit()
-            return redirect(url_for('get_item',
-                            category_id=category_id,
-                            item_id=new_item.id))
-        except Exception as e:
-            print('Error: ')
-            print(e)
-            return abort(Response('An unexpected error occurred', 500))
+        if len(request.form['name']) >= 1:
+            try:
+                new_item = Item(
+                  name=request.form['name'],
+                  description=(
+                    request.form[
+                      'description'
+                    ] if 'description' in request.form else None
+                  ),
+                  category_id=category_id,
+                  user_id=login_session['id']
+                )
+                db_session.add(new_item)
+                db_session.commit()
+                return redirect(url_for('get_item',
+                                category_id=category_id,
+                                item_id=new_item.id))
+            except Exception as e:
+                print('Error: ')
+                print(e)
+                return abort(Response('An unexpected error occurred', 500))
+        else:
+            return abort(Response(
+              'Parameters must not be empty',
+              400
+            ))
     else:
         return abort(Response('Required form parameters are missing',
                      400))
@@ -318,6 +417,20 @@ def get_item(category_id, item_id):
         return abort(Response('An unexpected error occurred', 500))
 
 
+@app.route('/categories/<int:category_id>/items/<int:item_id>/JSON',
+           methods=['GET'])
+def get_item_json(category_id, item_id):
+    try:
+        category = \
+            db_session.query(Category).filter_by(id=category_id).one()
+        item = db_session.query(Item).filter_by(id=item_id).one()
+        return jsonify(item=item.serialize)
+    except Exception as e:
+        print('Error: ')
+        print(e)
+        return abort(Response('An unexpected error occurred', 500))
+
+
 @app.route('/categories/<int:category_id>/items/<int:item_id>/edit',
            methods=['PUT'])
 @auth.required
@@ -328,7 +441,14 @@ def edit_item(category_id, item_id):
             allowed_edits = ('name', 'description')
             for arg in request.form:
                 if arg in allowed_edits:
-                    setattr(item, arg, request.form[arg])
+                    if arg == 'name':
+                        if len(request.form['name']) >= 1:
+                            setattr(item, arg, request.form[arg])
+                        else:
+                            return abort(Response(
+                              'Parameters must not be empty',
+                              400
+                            ))
             db_session.add(item)
             db_session.commit()
             return redirect(url_for('get_item',
@@ -343,6 +463,7 @@ def edit_item(category_id, item_id):
 
 @app.route('/categories/<int:category_id>/items/<int:item_id>/delete',
            methods=['DELETE'])
+@auth.required
 def delete_item(category_id, item_id):
     try:
         item = db_session.query(Item).filter_by(id=item_id).one()
@@ -358,8 +479,8 @@ def delete_item(category_id, item_id):
         print(e)
         return abort(Response('An unexpected error occurred', 500))
 
+
 if __name__ == '__main__':
     app.secret_key = 'super_secret_key'
     app.debug = True
     app.run(host='0.0.0.0', port=5000)
-
