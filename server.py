@@ -269,7 +269,7 @@ def edit_category(category_id):
         category = \
             db_session.query(Category).filter_by(id=category_id).one()
         allowed_edits = ('name', )
-        if login_session['id'] == category.user_id:
+        if login_session['id'] == category.account_id:
             for arg in request.form:
                 if arg in allowed_edits:
                     if len(request.form[arg]) >= 1:
@@ -300,7 +300,7 @@ def delete_category(category_id):
     try:
         category = \
             db_session.query(Category).filter_by(id=category_id).one()
-        if login_session['id'] == category.user_id:
+        if login_session['id'] == category.account_id:
             items = \
                 db_session.query(Item).filter_by(category_id=category_id).all()
             db_session.delete(category)
@@ -439,7 +439,7 @@ def get_item_json(category_id, item_id):
 def edit_item(category_id, item_id):
     try:
         item = db_session.query(Item).filter_by(id=item_id).one()
-        if login_session['id'] == item.user_id:
+        if login_session['id'] == item.account_id:
             allowed_edits = ('name', 'description')
             for arg in request.form:
                 if arg in allowed_edits:
@@ -469,7 +469,7 @@ def edit_item(category_id, item_id):
 def delete_item(category_id, item_id):
     try:
         item = db_session.query(Item).filter_by(id=item_id).one()
-        if login_session['id'] == item.user_id:
+        if login_session['id'] == item.account_id:
             db_session.delete(item)
             db_session.commit()
             return redirect(url_for('get_items',

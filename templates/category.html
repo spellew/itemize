@@ -2,7 +2,7 @@
 {% block content %}
   <div>
     <div>
-      {% if 'id' in session and session['id'] == category.user_id %}
+      {% if 'id' in session and session['id'] == category.account_id %}
       <div>
         <p>Delete Category</p>
         <form id="delete-category" data-category-id="{{ category.id }}">
@@ -13,7 +13,7 @@
       <div>
         <h3>{{ category.name }}</h3>
       </div>
-      {% if 'id' in session and session['id'] == category.user_id %}
+      {% if 'id' in session and session['id'] == category.account_id %}
         <div>
           <p>Edit Category</p>
           <form id="edit-category" data-category-id="{{ category.id }}">

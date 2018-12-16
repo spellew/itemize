@@ -7,7 +7,7 @@
         </a>
       </div>
       <div>
-        {% if 'id' in session and session['id'] == item.user_id %}
+        {% if 'id' in session and session['id'] == item.account_id %}
           <div>
             <p>Delete Item</p>
             <form id="delete-item" data-category-id="{{ category.id }}" data-item-id="{{ item.id }}">
@@ -18,7 +18,7 @@
         <div>
           <h3>{{ item.name }}</h3>
         </div>
-        {% if 'id' in session and session['id'] == item.user_id %}
+        {% if 'id' in session and session['id'] == item.account_id %}
           <div>
             <p>Edit Item</p>
             <form id="edit-item" data-category-id="{{ category.id }}" data-item-id="{{ item.id }}">
