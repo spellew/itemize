@@ -244,7 +244,7 @@ def new_category():
         if len(request.form['name']) >= 1:
             try:
                 new_category = Category(name=request.form['name'],
-                                        user_id=login_session['id'])
+                                        account_id=login_session['id'])
                 db_session.add(new_category)
                 db_session.commit()
                 return redirect(url_for('get_items',
@@ -379,7 +379,7 @@ def new_item(category_id):
                     ] if 'description' in request.form else None
                   ),
                   category_id=category_id,
-                  user_id=login_session['id']
+                  account_id=login_session['id']
                 )
                 db_session.add(new_item)
                 db_session.commit()
