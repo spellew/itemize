@@ -22,7 +22,7 @@ GOOGLE_CLIENT_ID = json.loads(
 
 app = Flask(__name__)
 
-engine = create_engine('sqlite:///itemize.db')
+engine = create_engine('postgresql://catalog:itemize@localhost/itemize')
 Base.metadata.bind = engine
 
 # Creates a database session, that"s always usable (no matter when created)
