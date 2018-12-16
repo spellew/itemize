@@ -15,9 +15,10 @@ import requests
 import random
 import string
 import json
+import os
 
 GOOGLE_CLIENT_ID = json.loads(
-    open('g_client_secrets.json', 'r').read())['web']['client_id']
+    open(os.path.dirname(os.path.realpath(__file__)) + '/' + 'g_client_secrets.json', 'r').read())['web']['client_id']
 
 app = Flask(__name__)
 

@@ -71,8 +71,7 @@ class Item(Base):
             }
 
 
-engine = create_engine('sqlite:///itemize.db')
-
+engine = create_engine('postgresql://catalog:itemize@localhost/itemize')
 # Creates all of our Tables using the created engine
 
 Base.metadata.create_all(engine)
