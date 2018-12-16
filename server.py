@@ -21,6 +21,7 @@ GOOGLE_CLIENT_ID = json.loads(
     open(os.path.dirname(os.path.realpath(__file__)) + '/' + 'g_client_secrets.json', 'r').read())['web']['client_id']
 
 app = Flask(__name__)
+app.secret_key = 'super_secret_key'
 
 engine = create_engine('postgresql://catalog:itemize@localhost/itemize')
 Base.metadata.bind = engine
@@ -482,6 +483,5 @@ def delete_item(category_id, item_id):
 
 
 if __name__ == '__main__':
-    app.secret_key = 'super_secret_key'
     app.debug = True
     app.run(host='0.0.0.0', port=5000)
