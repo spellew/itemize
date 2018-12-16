@@ -8,7 +8,7 @@ from oauth2client.client import flow_from_clientsecrets
 from oauth2client.client import FlowExchangeError
 from sqlalchemy import create_engine, asc
 from sqlalchemy.orm import sessionmaker, scoped_session
-from database import Base, User, Category, Item
+from database import Base, Account, Category, Item
 from functools import wraps
 import httplib2
 import requests
@@ -36,18 +36,18 @@ def remove_db_session(arg=None):
 
 
 # checks if the user is in the database
-def getUserID(email):
+def getAccountID(email):
     try:
         user = \
-            db_session.query(User).filter_by(email=email).one()
+            db_session.query(Account).filter_by(email=email).one()
         return user.id
     except Exception as e:
         return None
 
 
 # We use the flask session to create and store our user in the database
-def createUser(login_session):
-    new_user = User(
+def createAccount(login_session):
+    new_user = Account(
       google_id=login_session['google_id'],
       picture=login_session['picture'],
       email=login_session['email']
@@ -55,7 +55,7 @@ def createUser(login_session):
     db_session.add(new_user)
     db_session.commit()
     user = \
-        db_session.query(User).filter_by(
+        db_session.query(Account).filter_by(
           google_id=login_session['google_id']
         ).one()
     return user.id
@@ -164,10 +164,10 @@ def g_connect():
     login_session['picture'] = data['picture']
     login_session['email'] = data['email']
 
-    user_id = getUserID(data['email'])
+    user_id = getAccountID(data['email'])
 
     if not user_id:
-        user_id = createUser(login_session)
+        user_id = createAccount(login_session)
 
     login_session['id'] = user_id
 

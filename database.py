@@ -17,9 +17,9 @@ Base = declarative_base()
 # @propery creates a propert of a class
 # serialize produces a json stringable object for a row
 
-class User(Base):
+class Account(Base):
 
-    __tablename__ = 'user'
+    __tablename__ = 'account'
 
     id = Column(Integer, primary_key=True)
     email = Column(String(255), nullable=False, unique=True)
@@ -38,13 +38,13 @@ class Category(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False, unique=True)
-    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
-    user = relationship(User)
+    account_id = Column(Integer, ForeignKey('account.id'), nullable=False)
+    account = relationship(Account)
 
     @property
     def serialize(self):
         return {'id': self.id, 'name': self.name,
-                'user_id': self.user_id}
+                'account_id': self.account_id}
 
 
 class Item(Base):
@@ -57,8 +57,8 @@ class Item(Base):
     category_id = Column(Integer, ForeignKey('category.id'),
                          nullable=False)
     category = relationship(Category)
-    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
-    user = relationship(User)
+    account_id = Column(Integer, ForeignKey('account.id'), nullable=False)
+    account = relationship(Account)
 
     @property
     def serialize(self):
@@ -67,7 +67,7 @@ class Item(Base):
             'name': self.name,
             'description': self.description,
             'category_id': self.category_id,
-            'user_id': self.user_id,
+            'account_id': self.account_id,
             }
 
 
